@@ -5,7 +5,7 @@
 # ==============================================================================
 
 # 可选的设备配置文件。建议使用：VAR="${VAR:-value}"，这样环境变量优先。
-CONFIG_LOCAL_FILE="${PROJECT_DIR:-.}/config.local.sh"
+CONFIG_LOCAL_FILE="${PROJECT_DIR:-.}/gcable2m3u.config"
 if [ -f "$CONFIG_LOCAL_FILE" ]; then
 	. "$CONFIG_LOCAL_FILE"
 fi
@@ -17,7 +17,7 @@ fi
 API_NAVCHECK_URL="${API_NAVCHECK_URL:-http://172.16.241.29:80/u1/NavCheck}"
 API_CHANNEL_URL="${API_CHANNEL_URL:-http://172.16.241.29:80/u1/GetGroupChannels}"
 
-API_CLIENT="${API_CLIENT:-1024301261700119478}"
+API_CLIENT="${API_CLIENT:-}"
 API_DEVICE_ID="${API_DEVICE_ID:-}"
 
 # curl 超时
@@ -56,7 +56,7 @@ EPG_TEMP_FILE="$RUNTIME_DIR/epg.xml.tmp"
 # Web
 # ------------------------------------------------------------------------------
 
-# Web 服务通过软链接访问 /tmp 中的文件。
+# Web 服务通过软链接访问
 WEB_DIR="${WEB_DIR:-/www}"
 
 # ------------------------------------------------------------------------------

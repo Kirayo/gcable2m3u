@@ -1,5 +1,5 @@
 # Device-specific configuration
-config.local.sh
+gcable2m3u.config
 
 # Generated distribution files
 /dist/*

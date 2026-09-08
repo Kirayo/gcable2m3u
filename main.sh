@@ -56,6 +56,11 @@ init_runtime() {
 # ==============================================================================
 
 check_dependencies() {
+    [ -n "$API_CLIENT" ] || {
+        echo "未配置 API_CLIENT，请在 gcable2m3u.config 或环境变量中设置" >&2
+        return 1
+    }
+
     command -v curl >/dev/null 2>&1 || {
         echo "缺少依赖: curl" >&2
         return 1
