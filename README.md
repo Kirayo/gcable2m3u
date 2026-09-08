@@ -78,6 +78,8 @@ API_CLIENT="${API_CLIENT:-[your-client-id]}"
 
 常用变量包括 `API_CLIENT`、`API_DEVICE_ID`、`RUNTIME_DIR`、`WEB_DIR`、`API_CONNECT_TIMEOUT`、`API_TIMEOUT` 和 `EPG_URL`。
 
+运行日志同时输出到终端和 OpenWrt 系统日志，默认标签为 `gcable2m3u`，可通过 `LOG_TAG` 修改。使用 `logread -t gcable2m3u` 查看。
+
 也可以直接使用环境变量：
 
 ```sh

@@ -35,18 +35,29 @@ PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$PROJECT_DIR/transform/normalize.sh"
 . "$PROJECT_DIR/output/m3u.sh"
 
+# 同时输出终端和 OpenWrt 系统日志；没有 logger 时不影响主流程。
+log_info() {
+    printf '%s\n' "$*"
+    command -v logger >/dev/null 2>&1 && logger -t "$LOG_TAG" -- "$*"
+}
+
+log_error() {
+    printf '%s\n' "$*" >&2
+    command -v logger >/dev/null 2>&1 && logger -t "$LOG_TAG" -p user.err -- "$*"
+}
+
 # ==============================================================================
 # 初始化
 # ==============================================================================
 
 init_runtime() {
     mkdir -p "$RUNTIME_DIR" || {
-        echo "无法创建运行目录: $RUNTIME_DIR" >&2
+        log_error "无法创建运行目录: $RUNTIME_DIR"
         return 1
     }
 
     mkdir -p "$WEB_DIR" || {
-        echo "无法创建 Web 目录: $WEB_DIR" >&2
+        log_error "无法创建 Web 目录: $WEB_DIR"
         return 1
     }
 }
@@ -57,17 +68,17 @@ init_runtime() {
 
 check_dependencies() {
     [ -n "$API_CLIENT" ] || {
-        echo "未配置 API_CLIENT，请在 gcable2m3u.config 或环境变量中设置" >&2
+        log_error "未配置 API_CLIENT，请在 gcable2m3u.config 或 环境变量中设置"
         return 1
     }
 
     command -v curl >/dev/null 2>&1 || {
-        echo "缺少依赖: curl" >&2
+        log_error "缺少依赖: curl"
         return 1
     }
 
     command -v jq >/dev/null 2>&1 || {
-        echo "缺少依赖: jq" >&2
+        log_error "缺少依赖: jq"
         return 1
     }
 }
@@ -79,24 +90,24 @@ check_dependencies() {
 setup_web_links() {
     if [ -e "$WEB_DIR/iptv.m3u" ] || [ -L "$WEB_DIR/iptv.m3u" ]; then
         [ -L "$WEB_DIR/iptv.m3u" ] || {
-            echo "Web 路径已存在但不是软链接: $WEB_DIR/iptv.m3u" >&2
+            log_error "Web 路径已存在但不是软链接: $WEB_DIR/iptv.m3u"
             return 1
         }
     else
         ln -s "$M3U_FILE" "$WEB_DIR/iptv.m3u" || {
-            echo "创建 M3U 软链接失败" >&2
+            log_error "创建 M3U 软链接失败"
             return 1
         }
     fi
 
     if [ -e "$WEB_DIR/epg.xml" ] || [ -L "$WEB_DIR/epg.xml" ]; then
         [ -L "$WEB_DIR/epg.xml" ] || {
-            echo "Web 路径已存在但不是软链接: $WEB_DIR/epg.xml" >&2
+            log_error "Web 路径已存在但不是软链接: $WEB_DIR/epg.xml"
             return 1
         }
     else
         ln -s "$EPG_FILE" "$WEB_DIR/epg.xml" || {
-            echo "创建 EPG 软链接失败" >&2
+            log_error "创建 EPG 软链接失败"
             return 1
         }
     fi
@@ -107,20 +118,20 @@ setup_web_links() {
 # ==============================================================================
 
 generate_m3u() {
-    echo "正在生成 M3U..."
+    log_info "正在生成 M3U..."
 
     # 先写临时文件。
     m3u_temp_file="$M3U_TEMP_FILE.$$"
 
     m3u_generate > "$m3u_temp_file" || {
-        echo "M3U 生成失败" >&2
+        log_error "M3U 生成失败"
         rm -f "$m3u_temp_file"
         return 1
     }
 
     # 至少应该包含 #EXTM3U。
     [ -s "$m3u_temp_file" ] || {
-        echo "M3U 文件为空" >&2
+        log_error "M3U 文件为空"
         rm -f "$m3u_temp_file"
         return 1
     }
@@ -129,19 +140,19 @@ generate_m3u() {
     m3u_channel_count=$(grep -c '^#EXTINF:' "$m3u_temp_file")
 
     [ "$m3u_channel_count" -gt 0 ] || {
-        echo "M3U 没有有效频道" >&2
+        log_error "M3U 没有有效频道"
         rm -f "$m3u_temp_file"
         return 1
     }
 
     # 原子替换正式文件。
     mv "$m3u_temp_file" "$M3U_FILE" || {
-        echo "无法替换 M3U 文件" >&2
+        log_error "无法替换 M3U 文件"
         rm -f "$m3u_temp_file"
         return 1
     }
 
-    echo "M3U 频道数量: $m3u_channel_count"
+    log_info "M3U 频道数量: $m3u_channel_count"
 }
 
 # ==============================================================================
@@ -149,9 +160,9 @@ generate_m3u() {
 # ==============================================================================
 
 main() {
-    echo "========================================"
-    echo " cable2m3u"
-    echo "========================================"
+    log_info "========================================"
+    log_info " cable2m3u"
+    log_info "========================================"
 
     # --------------------------------------------------------------------------
     # 初始化
@@ -165,10 +176,10 @@ main() {
     # NavCheck
     # --------------------------------------------------------------------------
 
-    echo "正在执行 NavCheck..."
+    log_info "正在执行 NavCheck..."
 
     api_navcheck || {
-        echo "NavCheck 请求失败" >&2
+        log_error "NavCheck 请求失败"
         exit 1
     }
 
@@ -181,20 +192,20 @@ main() {
     account=$(api_get_account)
 
     [ -n "$account" ] || {
-        echo "NavCheck 未返回 account" >&2
+        log_error "NavCheck 未返回 account"
         exit 1
     }
 
-    echo "Account: $account"
+    log_info "Account: $account"
 
     # --------------------------------------------------------------------------
     # 获取频道
     # --------------------------------------------------------------------------
 
-    echo "正在获取频道列表..."
+    log_info "正在获取频道列表..."
 
     api_get_channels "$account" || {
-        echo "GetGroupChannels 请求失败" >&2
+        log_error "GetGroupChannels 请求失败"
         exit 1
     }
 
@@ -202,25 +213,25 @@ main() {
 
     channel_count=$(api_check_channels) || exit 1
 
-    echo "API 频道数量: $channel_count"
+    log_info "API 频道数量: $channel_count"
 
     # --------------------------------------------------------------------------
     # 标准化
     # --------------------------------------------------------------------------
 
-    echo "正在标准化频道..."
+    log_info "正在标准化频道..."
 
     channel_normalize || {
-        echo "频道标准化失败" >&2
+        log_error "频道标准化失败"
         exit 1
     }
 
     normalized_count=$(wc -l < "$CHANNEL_DATA_FILE")
 
-    echo "标准化频道数量: $normalized_count"
+    log_info "标准化频道数量: $normalized_count"
 
     [ "$normalized_count" -gt 0 ] || {
-        echo "标准化后没有频道" >&2
+        log_error "标准化后没有频道"
         exit 1
     }
 
@@ -234,11 +245,11 @@ main() {
     # 完成
     # --------------------------------------------------------------------------
 
-    echo "----------------------------------------"
-    echo "生成完成:"
-    echo "  M3U : $M3U_FILE"
-    echo "  Web : $WEB_DIR/iptv.m3u"
-    echo "----------------------------------------"
+    log_info "----------------------------------------"
+    log_info "生成完成:"
+    log_info "  M3U : $M3U_FILE"
+    log_info "  Web : $WEB_DIR/iptv.m3u"
+    log_info "----------------------------------------"
 }
 
 # ==============================================================================
