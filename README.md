@@ -53,11 +53,12 @@ sh build.sh /tmp/gcable2m3u.sh
 
 ## OpenWrt 部署
 
-最简单的部署是复制 `dist/` 下的脚本和配置模板：
-
 ```sh
-cp dist/gcable2m3u.sh dist/gcable2m3u.config /root/
+cd /target_doc
+wget -O gcable2m3u.sh https://github.com/Kirayo/gcable2m3u/releases/download/v0.1.0/gcable2m3u.sh
+wget -O gcable2m3u.config https://github.com/Kirayo/gcable2m3u/releases/download/v0.1.0/gcable2m3u.config
 chmod 755 gcable2m3u.sh
+# 编辑 config，填入 API_CLIENT
 ./gcable2m3u.sh
 ```
 
