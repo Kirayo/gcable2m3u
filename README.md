@@ -44,23 +44,17 @@ sh build.sh /tmp/gcable2m3u.sh
 #       /tmp/gcable2m3u.config
 ```
 
-构建脚本会按固定顺序合并配置、模型、API、标准化和输出模块，并执行 Shell 语法检查，同时复制配置模板。生成的脚本和配置文件可以一起复制到 OpenWrt。
+构建脚本会按固定顺序合并配置、模型、API、标准化和输出模块，并执行 Shell 语法检查，同时复制配置模板。
 
 ## OpenWrt 部署
 
 ```sh
-cd /target_doc
+cd /target
 wget -O gcable2m3u.sh https://github.com/Kirayo/gcable2m3u/releases/download/v0.1.0/gcable2m3u.sh
 wget -O gcable2m3u.config https://github.com/Kirayo/gcable2m3u/releases/download/v0.1.0/gcable2m3u.config
 chmod 755 gcable2m3u.sh
 # 编辑 config，填入 API_CLIENT
 ./gcable2m3u.sh
-```
-
-脚本也可以从任意当前目录启动：
-
-```sh
-sh /root/gcable2m3u/main.sh
 ```
 
 设备需要提供 POSIX `/bin/sh`、`curl` 和 `jq`。运行数据默认写入 `/tmp/cable2m3u`，M3U 和 EPG 文件以软链接形式放在 `/www`，实现局域网分发。
@@ -70,21 +64,19 @@ sh /root/gcable2m3u/main.sh
 将 `gcable2m3u.config` 放在与脚本同目录：
 
 ```sh
-cp gcable2m3u.config /root/gcable2m3u/gcable2m3u.config
+cp gcable2m3u.config /target/gcable2m3u.config
 ```
 
 配置文件中使用以下形式，环境变量会优先：
 
 ```sh
-API_CLIENT="${API_CLIENT:-[your-client-id]}"
-替换 [your-client-id]
+API_CLIENT="${API_CLIENT:-your-client-id}"
 ```
 
 `API_CLIENT` 一般为智能卡号或登录号，没有内置默认值，请到机顶盒设置页面获取。配置优先级为：环境变量、同目录 `gcable2m3u.config`。
 
-常用变量包括 `API_CLIENT`、`API_DEVICE_ID`、`RUNTIME_DIR`、`WEB_DIR`、`API_CONNECT_TIMEOUT`、`API_TIMEOUT` 和 `EPG_URL`。
 
-运行日志同时输出到终端和 OpenWrt 系统日志，默认标签为 `gcable2m3u`，可通过 `LOG_TAG` 修改。使用 `logread -t gcable2m3u` 查看。
+运行日志同时输出到 终端 和 系统日志 ，默认标签为 `gcable2m3u`，可通过 `LOG_TAG` 修改。使用 `logread -t gcable2m3u` 查看。
 
 也可以直接使用环境变量：
 
@@ -92,7 +84,7 @@ API_CLIENT="${API_CLIENT:-[your-client-id]}"
 API_CLIENT="your-client-id" \
 RUNTIME_DIR=/tmp/cable2m3u \
 WEB_DIR=/www \
-sh /root/gcable2m3u/main.sh
+sh /source/gcable2m3u.sh
 ```
 
 ## 定时运行
@@ -102,7 +94,7 @@ cron 使用入口脚本的绝对路径
 示例：
 
 ```cron
-*/30 * * * * /root/gcable2m3u.sh >/dev/null 2>&1
+*/30 * * * * /source/gcable2m3u.sh >/dev/null 2>&1
 ```
 
 本项目采用 [MIT License](LICENSE)。
