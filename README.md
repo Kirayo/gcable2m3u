@@ -1,20 +1,21 @@
-# cabletv2m3u
+# gcable2m3u
 
-面向 OpenWrt 的 POSIX Shell 项目：从广电 API 获取频道列表并生成 M3U 播放列表。
+面向 OpenWrt 的 POSIX Shell 项目：从广东广电 API 获取频道列表并生成 M3U 播放列表。
 
 ## 目录结构
 
 ```text
-cabletv2m3u/
+gcable2m3u/
 ├── build.sh                    # 将源码合并为单文件分发脚本
-├── get_iptv.sh                 # 源码入口
+├── main.sh                     # 源码入口
 ├── config.sh                   # 默认配置和本地配置加载
 ├── config.local.sh.example     # 设备配置模板
-├── api/data.sh                 # API 请求和响应检查
-├── channel/normalize.sh        # 频道标准化
-├── model/channel.sh            # 频道数据模型
+├── api/client.sh               # API 请求和响应检查
+├── transform/normalize.sh      # 频道数据标准化
+├── model/source.sh             # Source 数据模型
+├── model/channel.sh            # Channel 聚合模型
 ├── output/m3u.sh               # M3U 输出
-└── dist/get_iptv.sh            # build.sh 生成的分发文件
+└── dist/gcable2m3u.sh          # build.sh 生成的分发文件
 ```
 
 `dist/` 是构建产物目录，不应提交设备配置、API 响应或运行时文件。
@@ -27,30 +28,30 @@ cabletv2m3u/
 sh build.sh
 ```
 
-默认生成 `dist/get_iptv.sh`。也可以指定输出路径：
+默认生成 `dist/gcable2m3u.sh`。也可以指定输出路径：
 
 ```sh
-sh build.sh /tmp/get_iptv.sh
+sh build.sh /tmp/gcable2m3u.sh
 ```
 
 构建脚本会按固定顺序合并配置、模型、API、标准化和输出模块，并执行 Shell 语法检查。生成文件不再依赖源码目录，可以单独复制到 OpenWrt。
 
 ## OpenWrt 部署
 
-最简单的部署只需要复制 `dist/get_iptv.sh`：
+最简单的部署只需要复制 `dist/gcable2m3u.sh`：
 
 ```sh
-chmod 755 get_iptv.sh
-./get_iptv.sh
+chmod 755 gcable2m3u.sh
+./gcable2m3u.sh
 ```
 
 脚本也可以从任意当前目录启动：
 
 ```sh
-sh /root/cabletv2m3u/get_iptv.sh
+sh /root/gcable2m3u/main.sh
 ```
 
-设备需要提供 POSIX `/bin/sh`、`curl` 和 `jq`。运行数据默认写入 `/tmp/cabletv2m3u`，M3U 和 EPG 软链接默认放在 `/www`。
+设备需要提供 POSIX `/bin/sh`、`curl` 和 `jq`。运行数据默认写入 `/tmp/cable2m3u`，M3U 和 EPG 软链接默认放在 `/www`。
 
 ## 配置
 
@@ -74,19 +75,19 @@ API_CLIENT="${API_CLIENT:-your-client-id}"
 
 ```sh
 API_CLIENT="your-client-id" \
-RUNTIME_DIR=/tmp/cabletv2m3u \
+RUNTIME_DIR=/tmp/cable2m3u \
 WEB_DIR=/www \
-sh /root/cabletv2m3u/get_iptv.sh
+sh /root/gcable2m3u/main.sh
 ```
-
-不要把真实设备配置、认证信息或 API 响应提交到源码仓库。
 
 ## 定时运行
 
-cron 使用入口脚本的绝对路径：
+cron 使用入口脚本的绝对路径
+
+示例：
 
 ```cron
-*/30 * * * * /root/cabletv2m3u/get_iptv.sh >/dev/null 2>&1
+*/30 * * * * /root/gcable2m3u.sh >/dev/null 2>&1
 ```
 
 ## 当前范围
@@ -98,9 +99,9 @@ cron 使用入口脚本的绝对路径：
 ## 开发验证
 
 ```sh
-sh -n build.sh get_iptv.sh config.sh \
-    api/data.sh channel/normalize.sh \
-    model/channel.sh output/m3u.sh
+sh -n build.sh main.sh config.sh \
+    api/client.sh transform/normalize.sh \
+    model/source.sh model/channel.sh output/m3u.sh
 sh build.sh
-sh -n dist/get_iptv.sh
+sh -n dist/gcable2m3u.sh
 ```

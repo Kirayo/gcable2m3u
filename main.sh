@@ -1,15 +1,15 @@
 #!/bin/sh
 
 # ==============================================================================
-# cabletv2m3u
+# cable2m3u
 #
 # 广电 IPTV API → M3U
 #
 # 执行：
-#   sh get_iptv.sh
+#   sh main.sh
 #
 # Cron：
-#   */30 * * * * /root/cabletv2m3u/get_iptv.sh >/dev/null 2>&1
+#   */30 * * * * /root/gcable2m3u/main.sh >/dev/null 2>&1
 #
 # ==============================================================================
 
@@ -29,9 +29,10 @@ PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # 加载模块
 # ==============================================================================
 
+. "$PROJECT_DIR/model/source.sh"
 . "$PROJECT_DIR/model/channel.sh"
-. "$PROJECT_DIR/api/data.sh"
-. "$PROJECT_DIR/channel/normalize.sh"
+. "$PROJECT_DIR/api/client.sh"
+. "$PROJECT_DIR/transform/normalize.sh"
 . "$PROJECT_DIR/output/m3u.sh"
 
 # ==============================================================================
@@ -104,32 +105,34 @@ generate_m3u() {
     echo "正在生成 M3U..."
 
     # 先写临时文件。
-    m3u_generate > "$M3U_TEMP_FILE" || {
+    m3u_temp_file="$M3U_TEMP_FILE.$$"
+
+    m3u_generate > "$m3u_temp_file" || {
         echo "M3U 生成失败" >&2
-        rm -f "$M3U_TEMP_FILE"
+        rm -f "$m3u_temp_file"
         return 1
     }
 
     # 至少应该包含 #EXTM3U。
-    [ -s "$M3U_TEMP_FILE" ] || {
+    [ -s "$m3u_temp_file" ] || {
         echo "M3U 文件为空" >&2
-        rm -f "$M3U_TEMP_FILE"
+        rm -f "$m3u_temp_file"
         return 1
     }
 
     # 至少存在一个频道。
-    m3u_channel_count=$(grep -c '^#EXTINF:' "$M3U_TEMP_FILE")
+    m3u_channel_count=$(grep -c '^#EXTINF:' "$m3u_temp_file")
 
     [ "$m3u_channel_count" -gt 0 ] || {
         echo "M3U 没有有效频道" >&2
-        rm -f "$M3U_TEMP_FILE"
+        rm -f "$m3u_temp_file"
         return 1
     }
 
     # 原子替换正式文件。
-    mv "$M3U_TEMP_FILE" "$M3U_FILE" || {
+    mv "$m3u_temp_file" "$M3U_FILE" || {
         echo "无法替换 M3U 文件" >&2
-        rm -f "$M3U_TEMP_FILE"
+        rm -f "$m3u_temp_file"
         return 1
     }
 
@@ -142,7 +145,7 @@ generate_m3u() {
 
 main() {
     echo "========================================"
-    echo " cabletv2m3u"
+    echo " cable2m3u"
     echo "========================================"
 
     # --------------------------------------------------------------------------

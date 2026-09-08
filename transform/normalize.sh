@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # ==============================================================================
-# cabletv2m3u
+# cable2m3u
 # 频道标准化
 #
 # 输入：
@@ -133,16 +133,16 @@ channel_normalize() {
             sources: $sources
         }
         | select(.sourceId != "")
-    ' "$CHANNEL_FILE" > "$CHANNEL_DATA_FILE.tmp" || {
-        rm -f "$CHANNEL_DATA_FILE.tmp"
+    ' "$CHANNEL_FILE" > "$CHANNEL_DATA_FILE.$$" || {
+        rm -f "$CHANNEL_DATA_FILE.$$"
         return 1
     }
 
-    if [ ! -s "$CHANNEL_DATA_FILE.tmp" ]; then
-        rm -f "$CHANNEL_DATA_FILE.tmp"
+    if [ ! -s "$CHANNEL_DATA_FILE.$$" ]; then
+        rm -f "$CHANNEL_DATA_FILE.$$"
         echo "频道标准化结果为空" >&2
         return 1
     fi
 
-    mv "$CHANNEL_DATA_FILE.tmp" "$CHANNEL_DATA_FILE"
+    mv "$CHANNEL_DATA_FILE.$$" "$CHANNEL_DATA_FILE"
 }

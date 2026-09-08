@@ -1,12 +1,12 @@
 #!/bin/sh
 
-# 复制为 config.local.sh，放在 get_iptv.sh 同目录。
+# 复制为 config.local.sh，放在 main.sh 同目录。
 # 使用 VAR="${VAR:-value}" 保持环境变量优先级。
 
-API_NAVCHECK_URL="${API_NAVCHECK_URL:-http://192.0.2.1:80/u1/NavCheck}"
-API_CHANNEL_URL="${API_CHANNEL_URL:-http://192.0.2.1:80/u1/GetGroupChannels}"
+API_NAVCHECK_URL="${API_NAVCHECK_URL:-http://172.16.241.29:80/u1/NavCheck}"
+API_CHANNEL_URL="${API_CHANNEL_URL:-http://172.16.241.29:80/u1/GetGroupChannels}"
 API_CLIENT="${API_CLIENT:-change-me}"
 API_DEVICE_ID="${API_DEVICE_ID:-}"
 
-RUNTIME_DIR="${RUNTIME_DIR:-/tmp/cabletv2m3u}"
+RUNTIME_DIR="${RUNTIME_DIR:-/tmp/cable2m3u}"
 WEB_DIR="${WEB_DIR:-/www}"

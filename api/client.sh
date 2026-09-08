@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # 广电 IPTV API
-# ==============================================================================
+# ============================================================================
 
 # ------------------------------------------------------------------------------
 # NavCheck
@@ -14,14 +14,14 @@ api_navcheck() {
     curl -fsS \
         --connect-timeout "$API_CONNECT_TIMEOUT" \
         --max-time "$API_TIMEOUT" \
-        -o "$NAVCHECK_FILE.tmp" \
+        -o "$NAVCHECK_FILE.$$" \
         "$navcheck_url" || {
-        rm -f "$NAVCHECK_FILE.tmp"
+        rm -f "$NAVCHECK_FILE.$$"
         return 1
     }
 
     # API 请求成功后再替换正式文件。
-    mv "$NAVCHECK_FILE.tmp" "$NAVCHECK_FILE"
+    mv "$NAVCHECK_FILE.$$" "$NAVCHECK_FILE"
 }
 
 # ------------------------------------------------------------------------------
@@ -49,14 +49,14 @@ api_get_channels() {
     curl -fsS \
         --connect-timeout "$API_CONNECT_TIMEOUT" \
         --max-time "$API_TIMEOUT" \
-        -o "$CHANNEL_FILE.tmp" \
+        -o "$CHANNEL_FILE.$$" \
         "$channel_url" || {
-        rm -f "$CHANNEL_FILE.tmp"
+        rm -f "$CHANNEL_FILE.$$"
         return 1
     }
 
     # API 请求成功后再替换正式文件。
-    mv "$CHANNEL_FILE.tmp" "$CHANNEL_FILE"
+    mv "$CHANNEL_FILE.$$" "$CHANNEL_FILE"
 }
 
 # ------------------------------------------------------------------------------

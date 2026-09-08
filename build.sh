@@ -5,7 +5,7 @@
 set -e
 
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-OUTPUT_FILE=${1:-$PROJECT_DIR/dist/get_iptv.sh}
+OUTPUT_FILE=${1:-$PROJECT_DIR/dist/gcable2m3u.sh}
 OUTPUT_DIR=$(dirname -- "$OUTPUT_FILE")
 TEMP_FILE="$OUTPUT_FILE.tmp.$$"
 
@@ -13,15 +13,16 @@ cleanup() {
     rm -f "$TEMP_FILE"
 }
 
-trap cleanup EXIT HUP INT TERM
+trap cleanup 0 HUP INT TERM
 
 mkdir -p "$OUTPUT_DIR"
 
 for source_file in \
     "$PROJECT_DIR/config.sh" \
+    "$PROJECT_DIR/model/source.sh" \
     "$PROJECT_DIR/model/channel.sh" \
-    "$PROJECT_DIR/api/data.sh" \
-    "$PROJECT_DIR/channel/normalize.sh" \
+    "$PROJECT_DIR/api/client.sh" \
+    "$PROJECT_DIR/transform/normalize.sh" \
     "$PROJECT_DIR/output/m3u.sh"; do
     [ -f "$source_file" ] || {
         echo "缺少构建输入: $source_file" >&2
@@ -35,11 +36,12 @@ done
     printf '\n'
 
     sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/config.sh"
+    sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/model/source.sh"
     sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/model/channel.sh"
     printf '\n'
-    sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/api/data.sh"
+    sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/api/client.sh"
     printf '\n'
-    sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/channel/normalize.sh"
+    sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/transform/normalize.sh"
     printf '\n'
     sed '1{/^#!\/bin\/sh$/d;}' "$PROJECT_DIR/output/m3u.sh"
     printf '\n'
@@ -47,7 +49,7 @@ done
     awk '
         /^# BEGIN RUNTIME$/ { in_runtime = 1 }
         in_runtime { print }
-    ' "$PROJECT_DIR/get_iptv.sh" | sed '/^main "\$@"$/d'
+    ' "$PROJECT_DIR/main.sh" | sed '/^main "\$@"$/d'
 
     printf '%s\n' 'main "$@"'
 } > "$TEMP_FILE"
@@ -76,6 +78,6 @@ sh -n "$TEMP_FILE" || {
 
 mv "$TEMP_FILE" "$OUTPUT_FILE"
 chmod 755 "$OUTPUT_FILE"
-trap - EXIT HUP INT TERM
+trap - 0 HUP INT TERM
 
 echo "构建完成: $OUTPUT_FILE"

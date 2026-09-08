@@ -23,47 +23,21 @@ m3u_write_header() {
 m3u_write_channel() {
     channel=$1
 
-    source_id=$(printf '%s' "$channel" | jq -r '.sourceId // ""')
-    channel_no=$(printf '%s' "$channel" | jq -r '.channelNo // ""')
-    name=$(printf '%s' "$channel" | jq -r '.name // ""')
-    logo=$(printf '%s' "$channel" | jq -r '.logo // ""')
-    play_url=$(printf '%s' "$channel" | jq -r '.playUrl // ""')
-
-    # 当前还没有正式的频道分类模块。
-    group="其他"
-
-    # 没有播放地址的频道暂时不输出。
-    [ -n "$play_url" ] || return 0
-
-    # 没有名称也没有必要输出。
-    [ -n "$name" ] || return 0
-
-    printf '#EXTINF:-1'
-
-    # tvg-id 使用广电 channelID。
-    [ -n "$source_id" ] &&
-        printf ' tvg-id="%s"' "$source_id"
-
-    # 频道号。
-    [ -n "$channel_no" ] &&
-        printf ' tvg-chno="%s"' "$channel_no"
-
-    # XMLTV / M3U 频道名称。
-    [ -n "$name" ] &&
-        printf ' tvg-name="%s"' "$name"
-
-    # API 有 Logo 时才输出。
-    [ -n "$logo" ] &&
-        printf ' tvg-logo="%s"' "$logo"
-
-    # 当前统一归类到其他。
-    printf ' group-title="%s"' "$group"
-
-    # 显示名称。
-    printf ',%s\n' "$name"
-
-    # 播放地址。
-    printf '%s\n' "$play_url"
+    printf '%s' "$channel" | jq -r '
+        (.sourceId // "") as $sourceId
+        | (.channelNo // "") as $channelNo
+        | (.name // "") as $name
+        | (.logo // "") as $logo
+        | (.playUrl // "") as $playUrl
+        | select($name != "" and $playUrl != "")
+        | "#EXTINF:-1"
+          + (if $sourceId != "" then " tvg-id=\"" + $sourceId + "\"" else "" end)
+          + (if $channelNo != "" then " tvg-chno=\"" + $channelNo + "\"" else "" end)
+          + " tvg-name=\"" + $name + "\""
+          + (if $logo != "" then " tvg-logo=\"" + $logo + "\"" else "" end)
+          + " group-title=\"其他\""
+          + "," + $name + "\n" + $playUrl
+    '
 }
 
 # ------------------------------------------------------------------------------
