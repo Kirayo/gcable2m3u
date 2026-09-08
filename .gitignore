@@ -1,0 +1,13 @@
+# Device-specific configuration
+config.local.sh
+
+# Generated distribution files
+/dist/*
+!/dist/.gitkeep
+
+# Runtime and API data
+*.json
+*.ndjson
+*.m3u
+*.xml
+*.tmp

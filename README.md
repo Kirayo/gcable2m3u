@@ -1,76 +1,106 @@
-# 广电 API → M3U + XMLTV
+# cabletv2m3u
 
-这是一个面向 OpenWrt 的 POSIX Shell 项目：从广电 API 获取频道和节目数据，经过标准化、过滤、排序、分组与映射后，输出 M3U 播放列表和 XMLTV 节目单。
-
-## 当前阶段
-
-当前已实现输入文件链路、频道/节目中间格式、频道处理、XMLTV 映射、M3U/XMLTV 基础输出，以及基于 `curl` 的 HTTP 下载边界。仍不假设广电 API 的 URL、认证方式、JSON 字段或响应结构，API 原始响应的字段解析留待下一阶段。
+面向 OpenWrt 的 POSIX Shell 项目：从广电 API 获取频道列表并生成 M3U 播放列表。
 
 ## 目录结构
 
 ```text
 cabletv2m3u/
-├── get_iptv.sh          # 主入口：加载配置、库和模块，串联后续流程
-├── config/
-│   ├── config.sh        # 运行配置与默认值
-│   └── epg-map.conf     # 频道到 XMLTV 标识的映射配置
-├── api/
-│   └── data.sh          # API 获取、解析和标准模型转换
-├── output/
-│   └── output.sh        # M3U 和 XMLTV 输出
-└── lib/
-  └── common.sh        # 日志、HTTP、目录和 XML 辅助函数
+├── build.sh                    # 将源码合并为单文件分发脚本
+├── get_iptv.sh                 # 源码入口
+├── config.sh                   # 默认配置和本地配置加载
+├── config.local.sh.example     # 设备配置模板
+├── api/data.sh                 # API 请求和响应检查
+├── channel/normalize.sh        # 频道标准化
+├── model/channel.sh            # 频道数据模型
+├── output/m3u.sh               # M3U 输出
+└── dist/get_iptv.sh            # build.sh 生成的分发文件
 ```
 
-## 数据流
+`dist/` 是构建产物目录，不应提交设备配置、API 响应或运行时文件。
 
-```text
-配置
-  ↓
-API Client / Parser
-  ↓
-Standard Model
-  ↓
-频道标准化 → 过滤 → 排序 → 分组 ─┐
-                                   ├→ M3U
-节目标准化 → 合并 → 标识映射 ─────┘
-                                   └→ XMLTV
-```
+## 构建单文件
 
-各模块通过 Shell 函数和约定的数据文件衔接。当前中间文件使用 `|` 分隔，每行一个频道或节目；字段值不能包含 `|`。引入 JSON 解析实现时，应优先使用 OpenWrt 中可用的轻量工具，并把 API 字段差异限制在 `api/` 与标准化模块内。
-
-## 入口加载顺序
-
-`get_iptv.sh` 按以下顺序加载：配置 → 公共库 → 数据处理 → 输出。数据处理模块内部完成 API Client、Parser、Standard Model 和两条 Pipeline；输出模块完成 M3U/XMLTV Renderer。
-
-未配置 API URL 时，可通过 `CABLETV2M3U_CHANNEL_SOURCE` 与 `CABLETV2M3U_EPG_SOURCE` 指定符合中间格式的本地文件；两者都未指定时会生成示例数据，便于验证输出链路。
-
-## 后续实现顺序
-
-1. 根据实际接口补充认证、请求头、分页和 JSON 字段提取。
-2. 为频道和节目输入增加真实 API 样本及异常响应处理。
-3. 完善时间格式、时区、节目去重和跨天节目处理。
-4. 根据实际需求再拆分频道或 EPG 处理模块。
-5. 为输出增加原子写入、备份和失败恢复。
-6. 在 OpenWrt/BusyBox ash 上做端到端验证，并补充定时任务示例。
-
-## 兼容性约束
-
-脚本使用 POSIX Shell 语法，目标解释器为 `/bin/sh`。不使用 Bash 数组、`[[ ... ]]`、进程替换、`${BASH_SOURCE[0]}` 或 Bash 专属参数扩展。
-
-## 使用方式
+在源码根目录执行：
 
 ```sh
-chmod +x get_iptv.sh
+sh build.sh
+```
+
+默认生成 `dist/get_iptv.sh`。也可以指定输出路径：
+
+```sh
+sh build.sh /tmp/get_iptv.sh
+```
+
+构建脚本会按固定顺序合并配置、模型、API、标准化和输出模块，并执行 Shell 语法检查。生成文件不再依赖源码目录，可以单独复制到 OpenWrt。
+
+## OpenWrt 部署
+
+最简单的部署只需要复制 `dist/get_iptv.sh`：
+
+```sh
+chmod 755 get_iptv.sh
 ./get_iptv.sh
 ```
 
-指定真实接口时，例如：
+脚本也可以从任意当前目录启动：
 
 ```sh
-CABLETV2M3U_CHANNEL_API_URL="https://example.invalid/channels" \
-CABLETV2M3U_EPG_API_URL="https://example.invalid/epg" \
-./get_iptv.sh
+sh /root/cabletv2m3u/get_iptv.sh
 ```
 
-输出默认写入 `output-data/playlist.m3u` 和 `output-data/epg.xml`。
+设备需要提供 POSIX `/bin/sh`、`curl` 和 `jq`。运行数据默认写入 `/tmp/cabletv2m3u`，M3U 和 EPG 软链接默认放在 `/www`。
+
+## 配置
+
+需要固定设备配置时，将 `config.local.sh.example` 复制为与脚本同目录的 `config.local.sh`：
+
+```sh
+cp config.local.sh.example config.local.sh
+```
+
+配置文件中使用以下形式，环境变量会优先：
+
+```sh
+API_CLIENT="${API_CLIENT:-your-client-id}"
+```
+
+配置优先级为：环境变量、同目录 `config.local.sh`、内置默认值。
+
+常用变量包括 `API_NAVCHECK_URL`、`API_CHANNEL_URL`、`API_CLIENT`、`API_DEVICE_ID`、`RUNTIME_DIR`、`WEB_DIR`、`API_CONNECT_TIMEOUT`、`API_TIMEOUT` 和 `EPG_URL`。
+
+也可以直接使用环境变量：
+
+```sh
+API_CLIENT="your-client-id" \
+RUNTIME_DIR=/tmp/cabletv2m3u \
+WEB_DIR=/www \
+sh /root/cabletv2m3u/get_iptv.sh
+```
+
+不要把真实设备配置、认证信息或 API 响应提交到源码仓库。
+
+## 定时运行
+
+cron 使用入口脚本的绝对路径：
+
+```cron
+*/30 * * * * /root/cabletv2m3u/get_iptv.sh >/dev/null 2>&1
+```
+
+## 当前范围
+
+当前流程生成 M3U 播放列表。`epg.xml` 软链接作为后续 XMLTV 功能预留，当前不会生成节目单文件。
+
+频道标准化结果会从 API 返回的 `livePlayUrls` 选择第一个有效播放地址，输出为顶层 `playUrl`；没有播放地址的频道不会写入 M3U。
+
+## 开发验证
+
+```sh
+sh -n build.sh get_iptv.sh config.sh \
+    api/data.sh channel/normalize.sh \
+    model/channel.sh output/m3u.sh
+sh build.sh
+sh -n dist/get_iptv.sh
+```

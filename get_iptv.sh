@@ -30,7 +30,7 @@ PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # ==============================================================================
 
 . "$PROJECT_DIR/model/channel.sh"
-. "$PROJECT_DIR/api/channel.sh"
+. "$PROJECT_DIR/api/data.sh"
 . "$PROJECT_DIR/channel/normalize.sh"
 . "$PROJECT_DIR/output/m3u.sh"
 
@@ -232,5 +232,9 @@ main() {
     echo "  Web : $WEB_DIR/iptv.m3u"
     echo "----------------------------------------"
 }
+
+# ==============================================================================
+# END RUNTIME
+# ==============================================================================
 
 main "$@"
