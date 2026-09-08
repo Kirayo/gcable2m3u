@@ -35,6 +35,8 @@ PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$PROJECT_DIR/transform/normalize.sh"
 . "$PROJECT_DIR/output/m3u.sh"
 
+# BEGIN RUNTIME
+
 # 同时输出终端和 OpenWrt 系统日志；没有 logger 时不影响主流程。
 log_info() {
     printf '%s\n' "$*"
@@ -87,30 +89,32 @@ check_dependencies() {
 # Web 软链接
 # ==============================================================================
 
-setup_web_links() {
-    if [ -e "$WEB_DIR/iptv.m3u" ] || [ -L "$WEB_DIR/iptv.m3u" ]; then
-        [ -L "$WEB_DIR/iptv.m3u" ] || {
-            log_error "Web 路径已存在但不是软链接: $WEB_DIR/iptv.m3u"
-            return 1
-        }
-    else
-        ln -s "$M3U_FILE" "$WEB_DIR/iptv.m3u" || {
-            log_error "创建 M3U 软链接失败"
+ensure_web_link() {
+    link_path=$1
+    target_path=$2
+
+    if [ -e "$link_path" ] && [ ! -L "$link_path" ]; then
+        log_error "Web 路径已存在但不是软链接: $link_path"
+        return 1
+    fi
+
+    if [ -L "$link_path" ]; then
+        [ "$(readlink "$link_path")" = "$target_path" ] && [ -e "$link_path" ] && return 0
+        rm -f "$link_path" || {
+            log_error "无法移除失效 Web 软链接: $link_path"
             return 1
         }
     fi
 
-    if [ -e "$WEB_DIR/epg.xml" ] || [ -L "$WEB_DIR/epg.xml" ]; then
-        [ -L "$WEB_DIR/epg.xml" ] || {
-            log_error "Web 路径已存在但不是软链接: $WEB_DIR/epg.xml"
-            return 1
-        }
-    else
-        ln -s "$EPG_FILE" "$WEB_DIR/epg.xml" || {
-            log_error "创建 EPG 软链接失败"
-            return 1
-        }
-    fi
+    ln -s "$target_path" "$link_path" || {
+        log_error "创建 Web 软链接失败: $link_path"
+        return 1
+    }
+}
+
+setup_web_links() {
+    ensure_web_link "$WEB_DIR/iptv.m3u" "$M3U_FILE" || return 1
+    ensure_web_link "$WEB_DIR/epg.xml" "$EPG_FILE" || return 1
 }
 
 # ==============================================================================

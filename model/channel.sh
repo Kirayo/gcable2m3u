@@ -37,9 +37,7 @@ channel_model_create() {
             logo: $logo,
             channelNo: $channel_no,
             serviceType: $service_type,
-            groups: [
-                "全部"
-            ],
+            groups: [],
             sources: []
         }'
 }
@@ -65,6 +63,42 @@ channel_model_add_source() {
         jq --argjson source "$source" '
             .sources += [$source]
         '
+}
+
+# 将同一逻辑频道的中间记录聚合为一个 Channel。
+channel_model_merge_records() {
+    jq -c -s '
+        reduce .[] as $record
+            ({order: [], channels: {}};
+                if .channels | has($record.id) then
+                    .channels[$record.id].sources += $record.sources
+                else
+                    .order += [$record.id]
+                    | .channels[$record.id] = $record
+                end
+            )
+                | [.order[] as $id
+                        | .channels[$id]
+                        | .sources |= (
+                            unique_by([.playUrl, .playType, .quality])
+                            | sort_by(
+                                (if .quality == "4K" then 0
+                                 elif .quality == "高清" then 1
+                                 else 2
+                                 end),
+                                .quality,
+                                .playType,
+                                .playUrl
+                            )
+                        )
+                        | .groups = []
+                    ]
+                | sort_by((.channelNo | tonumber?) // 999999, .name)
+                | to_entries[] as $entry
+                | $entry.value + {
+                        channelNo: (($entry.key + 1) | tostring)
+                }
+    '
 }
 
 

@@ -16,6 +16,7 @@
 #   3. 拆分频道名称和清晰度
 #   4. 保留播放地址
 #   5. 保留 isTVAnyTime 回放标记
+#   6. 暂不生成业务分组
 #
 # 注意：
 #   jq 可能未编译 Oniguruma，因此本脚本不使用：
@@ -26,6 +27,9 @@
 # ==============================================================================
 
 channel_normalize() {
+    records_file="$CHANNEL_DATA_FILE.records.$$"
+    : > "$records_file" || return 1
+
     jq -c '
         [
             .channelGroups[]?
@@ -33,110 +37,38 @@ channel_normalize() {
         ]
         | reduce .[] as $channel
             ({};
-                ($channel.channelID // "") as $id
-                | if $id == "" then
-                    .
-                  elif has($id) then
-                    .
-                  else
-                    .[$id] = $channel
-                  end
+                ($channel.channelID // "" | tostring) as $id
+                | if $id == "" or has($id) then . else .[$id] = $channel end
             )
         | .[]
-        |
-        (
-            .channelName // ""
-        ) as $originalName
-        |
-        (
-            if ($originalName | endswith("（高清特色）")) then
-                {
-                    name: ($originalName[:-6]),
-                    quality: "高清特色"
-                }
-            elif ($originalName | endswith("（高清）")) then
-                {
-                    name: ($originalName[:-4]),
-                    quality: "高清"
-                }
-            elif ($originalName | endswith("（标清）")) then
-                {
-                    name: ($originalName[:-4]),
-                    quality: "标清"
-                }
-            elif ($originalName | endswith("（4K）")) then
-                {
-                    name: ($originalName[:-4]),
-                    quality: "4K"
-                }
-            elif ($originalName | endswith("(高清特色)")) then
-                {
-                    name: ($originalName[:-6]),
-                    quality: "高清特色"
-                }
-            elif ($originalName | endswith("(高清)")) then
-                {
-                    name: ($originalName[:-4]),
-                    quality: "高清"
-                }
-            elif ($originalName | endswith("(标清)")) then
-                {
-                    name: ($originalName[:-4]),
-                    quality: "标清"
-                }
-            elif ($originalName | endswith("(4K)")) then
-                {
-                    name: ($originalName[:-4]),
-                    quality: "4K"
-                }
-            else
-                {
-                    name: $originalName,
-                    quality: ""
-                }
-            end
-        ) as $nameInfo
-        |
-        (
-            [
-                .livePlayUrls[]?
-                | select((.playUrl // "") != "")
-                | {
-                    playType: (.playType // ""),
-                    playUrl: (.playUrl // "")
-                }
-            ]
-        ) as $sources
-        |
-        {
-            sourceId: (.channelID // ""),
-            channelNo: (.channelNumber // ""),
-            originalName: $originalName,
-            name: $nameInfo.name,
-            quality: $nameInfo.quality,
+    ' "$CHANNEL_FILE" |
+    while IFS= read -r channel; do
+        [ -n "$channel" ] || continue
 
-            serviceType: (.serviceType // ""),
+        printf '%s\n' "$channel" |
+            channel_model_source |
+            while IFS= read -r source; do
+                [ -n "$source" ] || continue
 
-            logo: (.imageUrl // ""),
+                name=$(printf '%s\n' "$source" | jq -r '.name')
+                source_id=$(printf '%s\n' "$source" | jq -r '.sourceId')
+                channel_no=$(printf '%s\n' "$source" | jq -r '.channelNo')
+                logo=$(printf '%s\n' "$source" | jq -r '.logo')
+                service_type=$(printf '%s\n' "$source" | jq -r '.serviceType')
 
-            groupId: (.groupId // ""),
-
-            isUnicast: (.isUnicast // "0"),
-            isAuthentication: (.isAuthentication // "0"),
-
-            bitRateType: (.bitRateType // ""),
-
-            isTVAnyTime: (.isTVAnyTime // "0"),
-            isStartOver: (.isStartOver // "0"),
-
-            playUrl: ($sources[0].playUrl // ""),
-            sources: $sources
-        }
-        | select(.sourceId != "")
-    ' "$CHANNEL_FILE" > "$CHANNEL_DATA_FILE.$$" || {
-        rm -f "$CHANNEL_DATA_FILE.$$"
+                channel=$(channel_model_create "$name" "$source_id" "$name" "$logo" "$channel_no" "$service_type")
+                channel_model_add_source "$channel" "$source" >> "$records_file"
+            done
+    done || {
+        rm -f "$records_file"
         return 1
     }
+
+    channel_model_merge_records < "$records_file" > "$CHANNEL_DATA_FILE.$$" || {
+        rm -f "$records_file" "$CHANNEL_DATA_FILE.$$"
+        return 1
+    }
+    rm -f "$records_file"
 
     if [ ! -s "$CHANNEL_DATA_FILE.$$" ]; then
         rm -f "$CHANNEL_DATA_FILE.$$"
@@ -144,5 +76,8 @@ channel_normalize() {
         return 1
     fi
 
-    mv "$CHANNEL_DATA_FILE.$$" "$CHANNEL_DATA_FILE"
+    mv "$CHANNEL_DATA_FILE.$$" "$CHANNEL_DATA_FILE" || {
+        rm -f "$CHANNEL_DATA_FILE.$$"
+        return 1
+    }
 }

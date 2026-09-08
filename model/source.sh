@@ -29,56 +29,57 @@
 #   bitRateType       码率类型
 #   isStartOver       API 原始字段
 #
+
 channel_model_source() {
-    jq '
-        (
-            .channelName // ""
-        ) as $originalName
-        |
-        (
-            if ($originalName | endswith("（高清特色）")) then
-                {name: ($originalName[:-6]), quality: "高清特色"}
-            elif ($originalName | endswith("（高清）")) then
-                {name: ($originalName[:-4]), quality: "高清"}
-            elif ($originalName | endswith("（标清）")) then
-                {name: ($originalName[:-4]), quality: "标清"}
-            elif ($originalName | endswith("（4K）")) then
-                {name: ($originalName[:-4]), quality: "4K"}
-            elif ($originalName | endswith("(高清特色)")) then
-                {name: ($originalName[:-6]), quality: "高清特色"}
-            elif ($originalName | endswith("(高清)")) then
-                {name: ($originalName[:-4]), quality: "高清"}
-            elif ($originalName | endswith("(标清)")) then
-                {name: ($originalName[:-4]), quality: "标清"}
-            elif ($originalName | endswith("(4K)")) then
-                {name: ($originalName[:-4]), quality: "4K"}
-            else
-                {name: $originalName, quality: ""}
-            end
-        ) as $nameInfo
-        |
-        {
-            sourceId: (.channelID // ""),
-            channelNo: (.channelNumber // ""),
-            originalName: $originalName,
-            name: $nameInfo.name,
-            quality: $nameInfo.quality,
-            serviceType: (.serviceType // ""),
-            logo: (.imageUrl // ""),
-            isUnicast: (.isUnicast // "0"),
-            isAuthentication: (.isAuthentication // "0"),
-            bitRateType: (.bitRateType // ""),
-            isTVAnyTime: (.isTVAnyTime // "0"),
-            isStartOver: (.isStartOver // "0"),
-            sources: [
-                .livePlayUrls[]?
-                | select((.playUrl // "") != "")
-                | {
-                    playType: (.playType // ""),
-                    playUrl: (.playUrl // "")
-                }
-            ]
-        }
-        | select(.sourceId != "")
-    '
+	jq -c '
+		(.channelName // "") as $originalName
+		|
+		(
+			if ($originalName | endswith("（高清特色）")) then
+				{name: ($originalName[:-6]), quality: "高清"}
+			elif ($originalName | endswith("（特色）")) then
+				{name: ($originalName[:-4]), quality: "标清"}
+			elif ($originalName | endswith("（高清）")) then
+				{name: ($originalName[:-4]), quality: "高清"}
+			elif ($originalName | endswith("（标清）")) then
+				{name: ($originalName[:-4]), quality: "标清"}
+			elif ($originalName | endswith("（4K）")) then
+				{name: ($originalName[:-4]), quality: "4K"}
+			elif ($originalName | endswith("(高清特色)")) then
+				{name: ($originalName[:-6]), quality: "高清"}
+			elif ($originalName | endswith("(特色)")) then
+				{name: ($originalName[:-4]), quality: "标清"}
+			elif ($originalName | endswith("(高清)")) then
+				{name: ($originalName[:-4]), quality: "高清"}
+			elif ($originalName | endswith("(标清)")) then
+				{name: ($originalName[:-4]), quality: "标清"}
+			elif ($originalName | endswith("(4K)")) then
+				{name: ($originalName[:-4]), quality: "4K"}
+			else
+				{name: $originalName, quality: ""}
+			end
+		) as $nameInfo
+		|
+		. as $channel
+		| .livePlayUrls[]?
+		| select((.playUrl // "") != "")
+		| select((.playUrl | startswith("delivery://")) | not)
+		| {
+			sourceId: ($channel.channelID // "" | tostring),
+			channelNo: ($channel.channelNumber // "" | tostring),
+			originalName: $originalName,
+			name: $nameInfo.name,
+			quality: $nameInfo.quality,
+			serviceType: ($channel.serviceType // ""),
+			logo: ($channel.imageUrl // ""),
+			isUnicast: ($channel.isUnicast // "0"),
+			isAuthentication: ($channel.isAuthentication // "0"),
+			bitRateType: ($channel.bitRateType // ""),
+			isTVAnyTime: ($channel.isTVAnyTime // "0"),
+			isStartOver: ($channel.isStartOver // "0"),
+			playType: (.playType // ""),
+			playUrl: (.playUrl // "")
+		}
+		| select(.sourceId != "")
+	'
 }

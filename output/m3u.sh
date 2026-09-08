@@ -17,39 +17,31 @@ m3u_write_header() {
 }
 
 # ------------------------------------------------------------------------------
-# 输出单个频道
-# ------------------------------------------------------------------------------
-
-m3u_write_channel() {
-    channel=$1
-
-    printf '%s' "$channel" | jq -r '
-        (.sourceId // "") as $sourceId
-        | (.channelNo // "") as $channelNo
-        | (.name // "") as $name
-        | (.logo // "") as $logo
-        | (.playUrl // "") as $playUrl
-        | select($name != "" and $playUrl != "")
-        | "#EXTINF:-1"
-          + (if $sourceId != "" then " tvg-id=\"" + $sourceId + "\"" else "" end)
-          + (if $channelNo != "" then " tvg-chno=\"" + $channelNo + "\"" else "" end)
-          + " tvg-name=\"" + $name + "\""
-          + (if $logo != "" then " tvg-logo=\"" + $logo + "\"" else "" end)
-          + " group-title=\"其他\""
-          + "," + $name + "\n" + $playUrl
-    '
-}
-
-# ------------------------------------------------------------------------------
 # 生成 M3U
 # ------------------------------------------------------------------------------
 
 m3u_generate() {
     m3u_write_header
 
-    while IFS= read -r channel; do
-        [ -n "$channel" ] || continue
-
-        m3u_write_channel "$channel"
-    done < "$CHANNEL_DATA_FILE"
+    jq -r '
+                (.tvgId // "") as $tvgId
+                | (.channelNo // "") as $channelNo
+                | (.name // "") as $name
+                | (.logo // "") as $logo
+                | ((.groups // [])[0] // "") as $group
+                | .sources[]?
+                | (.serviceType // "") as $serviceType
+                | (.quality // "") as $quality
+                | (.playUrl // "") as $sourceUrl
+                | select($name != "" and $sourceUrl != "")
+                | (if $quality != "" then $sourceUrl + "$" + $quality else $sourceUrl end) as $playUrl
+        | "#EXTINF:-1"
+                    + (if $tvgId != "" then " tvg-id=\"" + $tvgId + "\"" else "" end)
+          + (if $channelNo != "" then " tvg-chno=\"" + $channelNo + "\"" else "" end)
+          + " tvg-name=\"" + $name + "\""
+          + (if $serviceType == "2" then " radio=\"true\"" else "" end)
+          + (if $logo != "" then " tvg-logo=\"" + $logo + "\"" else "" end)
+                    + (if $group != "" then " group-title=\"" + $group + "\"" else "" end)
+          + "," + $name + "\n" + $playUrl
+    ' "$CHANNEL_DATA_FILE"
 }

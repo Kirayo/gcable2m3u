@@ -71,6 +71,11 @@ main_count=$(grep -c '^main "\$@"$' "$TEMP_FILE" || true)
     exit 1
 }
 
+grep -q '^main() {' "$TEMP_FILE" || {
+    echo "构建产物缺少 main 函数" >&2
+    exit 1
+}
+
 sh -n "$TEMP_FILE" || {
     echo "构建产物语法检查失败" >&2
     exit 1
