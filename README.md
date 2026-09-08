@@ -41,19 +41,22 @@ gcable2m3u/
 sh build.sh
 ```
 
-默认生成 `dist/gcable2m3u.sh`。也可以指定输出路径：
+默认生成 `dist/gcable2m3u.sh` 和 `dist/gcable2m3u.config`。也可以指定输出脚本路径，配置文件会输出到同一目录：
 
 ```sh
 sh build.sh /tmp/gcable2m3u.sh
+# 输出：/tmp/gcable2m3u.sh
+#       /tmp/gcable2m3u.config
 ```
 
-构建脚本会按固定顺序合并配置、模型、API、标准化和输出模块，并执行 Shell 语法检查。生成文件不再依赖源码目录，可以单独复制到 OpenWrt。
+构建脚本会按固定顺序合并配置、模型、API、标准化和输出模块，并执行 Shell 语法检查，同时复制配置模板。生成的脚本和配置文件可以一起复制到 OpenWrt。
 
 ## OpenWrt 部署
 
-最简单的部署只需要复制 `dist/gcable2m3u.sh`：
+最简单的部署是复制 `dist/` 下的脚本和配置模板：
 
 ```sh
+cp dist/gcable2m3u.sh dist/gcable2m3u.config /root/
 chmod 755 gcable2m3u.sh
 ./gcable2m3u.sh
 ```

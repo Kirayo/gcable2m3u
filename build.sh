@@ -8,9 +8,11 @@ PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 OUTPUT_FILE=${1:-$PROJECT_DIR/dist/gcable2m3u.sh}
 OUTPUT_DIR=$(dirname -- "$OUTPUT_FILE")
 TEMP_FILE="$OUTPUT_FILE.tmp.$$"
+CONFIG_FILE="$OUTPUT_DIR/gcable2m3u.config"
+TEMP_CONFIG_FILE="$CONFIG_FILE.tmp.$$"
 
 cleanup() {
-    rm -f "$TEMP_FILE"
+    rm -f "$TEMP_FILE" "$TEMP_CONFIG_FILE"
 }
 
 trap cleanup 0 HUP INT TERM
@@ -29,6 +31,11 @@ for source_file in \
         exit 1
     }
 done
+
+[ -f "$PROJECT_DIR/gcable2m3u.config" ] || {
+    echo "缺少配置模板: $PROJECT_DIR/gcable2m3u.config" >&2
+    exit 1
+}
 
 {
     printf '%s\n' '#!/bin/sh'
@@ -83,6 +90,10 @@ sh -n "$TEMP_FILE" || {
 
 mv "$TEMP_FILE" "$OUTPUT_FILE"
 chmod 755 "$OUTPUT_FILE"
+cp "$PROJECT_DIR/gcable2m3u.config" "$TEMP_CONFIG_FILE"
+mv "$TEMP_CONFIG_FILE" "$CONFIG_FILE"
+chmod 644 "$CONFIG_FILE"
 trap - 0 HUP INT TERM
 
 echo "构建完成: $OUTPUT_FILE"
+echo "配置模板: $CONFIG_FILE"
