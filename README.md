@@ -2,7 +2,6 @@
 
 面向 OpenWrt 的 POSIX Shell 项目：支持从广东广电获取频道列表并生成 M3U 播放列表。
 
-本项目采用 [MIT License](LICENSE)。
 
 ## 当前进度
 
@@ -109,3 +108,5 @@ cron 使用入口脚本的绝对路径
 ```cron
 */30 * * * * /root/gcable2m3u.sh >/dev/null 2>&1
 ```
+
+本项目采用 [MIT License](LICENSE)。
