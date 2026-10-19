@@ -34,6 +34,8 @@ channel_normalize() {
         [
             .channelGroups[]?
             | .channls[]?
+            | (.channelName // "" | tostring) as $channel_name
+            | select(($channel_name | (contains("广告") or contains("购物"))) | not)
         ]
         | reduce .[] as $channel
             ({};

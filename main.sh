@@ -86,7 +86,7 @@ check_dependencies() {
 }
 
 # ==============================================================================
-# Web 软链接
+# EPG 软链接
 # ==============================================================================
 
 ensure_web_link() {
@@ -113,8 +113,7 @@ ensure_web_link() {
 }
 
 setup_web_links() {
-    ensure_web_link "$WEB_DIR/iptv.m3u" "$M3U_FILE" || return 1
-    ensure_web_link "$WEB_DIR/epg.xml" "$EPG_FILE" || return 1
+    ensure_web_link "$WEB_DIR/epg.xml" "$EPG_FILE"
 }
 
 # ==============================================================================
@@ -252,7 +251,6 @@ main() {
     log_info "----------------------------------------"
     log_info "生成完成:"
     log_info "  M3U : $M3U_FILE"
-    log_info "  Web : $WEB_DIR/iptv.m3u"
     log_info "----------------------------------------"
 }
 

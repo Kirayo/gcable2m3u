@@ -91,9 +91,54 @@ channel_model_merge_records() {
                                 .playUrl
                             )
                         )
-                        | .groups = []
+                        | (.name // "" | ascii_downcase) as $lower_name
+                        | .groups = (
+                            if ((.serviceType // "" | tostring) == "2") then
+                                ["广播"]
+                            elif (
+                                ($lower_name | contains("香港"))
+                                or ($lower_name | contains("澳门"))
+                                or ($lower_name | contains("澳門"))
+                                or ($lower_name | contains("港台"))
+                                or ($lower_name | contains("凤凰"))
+                                or ($lower_name | contains("鳳凰"))
+                                or ($lower_name | contains("翡翠台"))
+                                or ($lower_name | contains("明珠台"))
+                            ) then
+                                ["港澳"]
+                            elif (
+                                ($lower_name | contains("体育"))
+                                or ($lower_name | contains("cctv5"))
+                                or ($lower_name | contains("cctv-5"))
+                                or ($lower_name | contains("cctv16"))
+                                or ($lower_name | contains("cctv-16"))
+                            ) then
+                                ["体育"]
+                            elif (
+                                ($lower_name | contains("cctv"))
+                                or ($lower_name | contains("cgtn"))
+                                or ($lower_name | contains("央视"))
+                                or ($lower_name | contains("中央电视台"))
+                            ) then
+                                ["央视"]
+                            elif ($lower_name | contains("卫视")) then
+                                ["卫视"]
+                            else
+                                ["其他"]
+                            end
+                        )
                     ]
-                | sort_by((.channelNo | tonumber?) // 999999, .name)
+                | sort_by(
+                    (if ((.groups // [])[0] // "") == "央视" then 0
+                     elif ((.groups // [])[0] // "") == "卫视" then 1
+                     elif ((.groups // [])[0] // "") == "体育" then 2
+                     elif ((.groups // [])[0] // "") == "港澳" then 3
+                     elif ((.groups // [])[0] // "") == "广播" then 5
+                     else 4
+                     end),
+                    ((.channelNo | tonumber?) // 999999),
+                    .name
+                )
                 | to_entries[] as $entry
                 | $entry.value + {
                         channelNo: (($entry.key + 1) | tostring)
